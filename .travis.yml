@@ -1,0 +1,10 @@
+jobs:
+  include:
+    - language: python
+      python: 3.6
+      services: mongodb
+      install:
+        - pip install -r dev-requirements.txt
+      script:
+        - flake8 --statistics --verbose *.py
+        - pytest -s src/test
