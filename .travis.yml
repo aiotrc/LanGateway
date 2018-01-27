@@ -5,6 +5,7 @@ jobs:
       services: mongodb
       install:
         - pip install -r dev-requirements.txt
+        - pip install -r requirements.txt
       script:
         - flake8 --statistics --verbose *.py
         - pytest -s src/test
