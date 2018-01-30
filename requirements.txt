@@ -1,5 +1,11 @@
+gevent
 requests
 Flask
 Flask-SQLAlchemy
+Flask-Script
+Flask-Testing
+Flask-Cors
+Flask-Migrate
 PyJWT
 validators
+SQLAlchemy

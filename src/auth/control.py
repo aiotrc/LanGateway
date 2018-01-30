@@ -1,13 +1,14 @@
 from flask import Blueprint
 
-from src.auth.views import DataAPI
+from .views import DataAPI
 
-data = Blueprint('data', __name__)
+data_blueprint = Blueprint('data', __name__)
 # define the API resources
 data_view = DataAPI.as_view('data_api')
+print("data_view")
 
 # add Rules for API Endpoints
-data.add_url_rule(
+data_blueprint.add_url_rule(
     '/data',
     view_func=data_view,
     methods=['POST']

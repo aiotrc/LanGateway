@@ -1,13 +1,9 @@
 import os
 
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-postgres_local_base = 'postgresql://postgres:@localhost/'
-database_name = 'lan_gateway'
-app = Flask(__name__)
-db = SQLAlchemy(app)
+postgres_local_base = 'postgresql://postgres:password@localhost/'
+database_name = 'postgres'
 
 
 class BaseConfig:

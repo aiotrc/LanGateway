@@ -3,7 +3,7 @@ import validators
 from flask import request, make_response, jsonify
 from flask.views import MethodView
 
-from src.auth.models import User
+from .models import User
 
 
 class DataAPI(MethodView):
@@ -13,7 +13,7 @@ class DataAPI(MethodView):
 
     def post(self):
         # send data request
-        post_data = request.get_json()
+        post_data = request.get_json(force=True)
         auth_token = post_data.get('token')
         if auth_token:
             resp = User.decode_auth_token(auth_token)
