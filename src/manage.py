@@ -3,9 +3,9 @@ import datetime
 import jwt
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
+from gevent.wsgi import WSGIServer
 
 from core import app, db
-from gevent.wsgi import WSGIServer
 
 payload = {
     'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
@@ -24,7 +24,6 @@ migrate = Migrate(app, db)
 # migrations
 manager.add_command('db', MigrateCommand)
 
-
 @manager.command
 def create_db():
     """Creates the db tables."""
@@ -40,3 +39,4 @@ def drop_db():
 if __name__ == '__main__':
     http_server = WSGIServer(('localhost', 5000), app, keyfile='server.key', certfile='server.crt')
     http_server.serve_forever()
+
