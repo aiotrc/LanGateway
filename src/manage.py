@@ -8,7 +8,7 @@ from auth import app, db
 from gevent.wsgi import WSGIServer
 
 payload = {
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
+    'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=10),
     'iat': datetime.datetime.utcnow(),
     'sub': 1
 }
@@ -38,5 +38,5 @@ def drop_db():
 
 
 if __name__ == '__main__':
-    http_server = WSGIServer(('localhost', 5000), app)
+    http_server = WSGIServer(('localhost', 5000), app, keyfile='server.key', certfile='server.crt')
     http_server.serve_forever()
