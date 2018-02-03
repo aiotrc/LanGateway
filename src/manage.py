@@ -4,7 +4,7 @@ import jwt
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 
-from auth import app, db
+from core import app, db
 from gevent.wsgi import WSGIServer
 
 payload = {

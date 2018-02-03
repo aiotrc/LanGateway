@@ -10,14 +10,14 @@ CORS(app)
 
 app_settings = os.getenv(
     'APP_SETTINGS',
-    'src.auth.config.DevelopmentConfig'
+    'src.core.config.DevelopmentConfig'
 )
 app.config.from_object(app_settings)
 
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 
-from auth.control import data_blueprint
+from core.control import data_blueprint
 
 app.register_blueprint(data_blueprint)
 

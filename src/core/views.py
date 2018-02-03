@@ -61,6 +61,6 @@ class DataAPI(MethodView):
         else:
             response_object = {
                 'status': 'fail',
-                'message': 'Provide a valid auth token.'
+                'message': 'Provide a valid core token.'
             }
             return make_response(jsonify(response_object)), 401

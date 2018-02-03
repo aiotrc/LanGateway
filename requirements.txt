@@ -6,6 +6,7 @@ Flask-Script
 Flask-Testing
 Flask-Cors
 Flask-Migrate
+flask-socketio
 PyJWT
 validators
 SQLAlchemy

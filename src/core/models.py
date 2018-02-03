@@ -2,7 +2,7 @@ import datetime
 
 import jwt
 
-from auth import db, app
+from core import db, app
 
 
 class User(db.Model):
@@ -38,7 +38,7 @@ class User(db.Model):
     @staticmethod
     def decode_auth_token(auth_token):
         """
-        Validates the auth token
+        Validates the core token
         :param auth_token:
         :return: integer|string
         """
@@ -74,7 +74,7 @@ class BlacklistToken(db.Model):
 
     @staticmethod
     def check_blacklist(auth_token):
-        # check whether auth token has been blacklisted
+        # check whether core token has been blacklisted
         res = BlacklistToken.query.filter_by(token=str(auth_token)).first()
         if res:
             return True
