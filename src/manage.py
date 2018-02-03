@@ -8,7 +8,7 @@ from auth import app, db
 from gevent.wsgi import WSGIServer
 
 payload = {
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=10),
+    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
     'iat': datetime.datetime.utcnow(),
     'sub': 1
 }

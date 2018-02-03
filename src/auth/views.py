@@ -15,17 +15,21 @@ class DataAPI(MethodView):
         # send data request
         post_data = request.get_json(force=True)
         auth_token = post_data.get('token', None)
+        # check for token field
         if auth_token:
             resp = User.decode_auth_token(auth_token)
+            # check whether a user id is returned
             if not isinstance(resp, str):
                 endpoint = post_data.get('endpoint', None)
                 data = post_data.get('data', None)
+                # check for a valid url as endpoint
                 if not endpoint or not validators.url(endpoint):
                     response_object = {
                         'status': 'fail',
                         'message': 'Endpoint is not valid url.'
                     }
                     return make_response(jsonify(response_object)), 401
+                # check for data field
                 if not data:
                     response_object = {
                         'status': 'fail',
@@ -33,6 +37,7 @@ class DataAPI(MethodView):
                     }
                     return make_response(jsonify(response_object)), 401
                 user = User.query.filter_by(id=resp).first()
+                # check whether user with provided id exists in database
                 if user is None:
                     response_object = {
                         'status': 'fail',
@@ -44,7 +49,9 @@ class DataAPI(MethodView):
                     'name': user.name,
                     'data': data
                 }
+                # send post request to provided endpoint
                 response = requests.post(endpoint, data=request_object)
+                # return result from endpoint
                 return make_response(response.text), 200
             response_object = {
                 'status': 'fail',
