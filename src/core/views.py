@@ -3,6 +3,7 @@ import validators
 from flask import request, make_response, jsonify
 from flask.views import MethodView
 
+from core.mqtt.handler import publish_message
 from .models import User
 
 
@@ -37,15 +38,14 @@ class DataAPI(MethodView):
                         'message': 'User is not valid'
                     }
                     return make_response(jsonify(response_object)), 401
-                request_object = {
-                    'user_id': user.id,
-                    'name': user.name,
-                    'data': data
+                # send data to platform
+                publish_message(data)
+                response_object = {
+                    'status': 'success',
+                    'message': 'Data transferred'
                 }
-                # send post request to provided endpoint
-                response = requests.post(endpoint, data=request_object)
                 # return result from endpoint
-                return make_response(response.text), 200
+                return make_response(response_object), 200
             response_object = {
                 'status': 'fail',
                 'message': resp

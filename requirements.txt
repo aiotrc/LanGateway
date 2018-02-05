@@ -10,3 +10,4 @@ flask-socketio
 PyJWT
 validators
 SQLAlchemy
+paho-mqtt
