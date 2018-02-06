@@ -45,7 +45,7 @@ class DataAPI(MethodView):
                     'message': 'Data transferred'
                 }
                 # return result from endpoint
-                return make_response(response_object), 200
+                return make_response(jsonify(response_object)), 200
             response_object = {
                 'status': 'fail',
                 'message': resp
@@ -57,3 +57,4 @@ class DataAPI(MethodView):
                 'message': 'Provide a valid core token.'
             }
             return make_response(jsonify(response_object)), 401
+

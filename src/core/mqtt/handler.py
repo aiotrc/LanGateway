@@ -35,36 +35,39 @@ def push(s: str):
     return True
 
 
-def on_message(client, userdata, message):
-    print('on_message: topic[' + message.topic + ']')
+def on_message_callback(client, userdata, message):
+    print('on_message_callback: topic[' + message.topic + ']')
     if is_valid(message.payload):
         send_message(message.payload)
     else:
         print('Message payload not valid')
 
 
-def on_publish(client, userdata, result):
-    print('on_publish')
+def on_publish_callback(client, userdata, mid):
+    print('on_publish_callback')
 
 
-def on_connect(client, userdata, flags, rc):
-    print('on_connect: result code[' + str(rc) + ']')
+def connect_callback(client, userdata, flags, rc):
+    print('connect_callback: result code[' + str(rc) + ']')
     client.subscribe(publish_name)
 
 
-def on_disconnect(client, userdata, rc):
-    print('on_disconnect')
+def disconnect_callback(client, userdata, self):
+    print('disconnect_callback')
 
 
 def publish_message(message):
-    client.publish(topic=message_topic, payload=message)
+    print("publish_message")
+    publish_client = Client(client_id=client_name, protocol=MQTTv311)
+    publish_client.publish(topic=message_topic, payload=message)
 
 
-client = Client(client_id=client_name, protocol=MQTTv311)
-client.on_message = on_message
-client.on_publish = on_publish
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.connect(host=broker_address, port=broker_port)
-client.loop_forever()
+if __name__ == '__main__':
+    client = Client(client_id=client_name, protocol=MQTTv311)
+    client.on_message = on_message_callback
+    client.on_publish = on_publish_callback
+    client.on_connect = connect_callback
+    client.on_disconnect = disconnect_callback
+    client.connect(host=broker_address, port=broker_port)
+    client.loop_forever()
 

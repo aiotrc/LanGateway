@@ -16,4 +16,4 @@ def send_message(data_json):
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app=app, host='localhost', port=5001)

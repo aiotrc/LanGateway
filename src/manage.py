@@ -1,23 +1,20 @@
-import datetime
-
-import jwt
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from gevent.wsgi import WSGIServer
 
 from core import app, db
 
-payload = {
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
-    'iat': datetime.datetime.utcnow(),
-    'sub': 1
-}
-token = jwt.encode(
-    payload,
-    app.config.get('SECRET_KEY'),
-    algorithm='HS256'
-)
-print(token)
+# payload = {
+#     'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
+#     'iat': datetime.datetime.utcnow(),
+#     'sub': 1
+# }
+# token = jwt.encode(
+#     payload,
+#     app.config.get('SECRET_KEY'),
+#     algorithm='HS256'
+# )
+# print(token)
 
 manager = Manager(app)
 migrate = Migrate(app, db)

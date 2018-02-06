@@ -3,7 +3,7 @@ Global variables
 """
 import os
 
-# 172.23.132.37
+# 172.23.132.37 / iot.eclipse.org
 broker_address = os.getenv('MQTT_BROKER', 'iot.eclipse.org')
 broker_port = 1883
 
