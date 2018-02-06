@@ -1,8 +1,7 @@
-import requests
-import validators
 from flask import request, make_response, jsonify
 from flask.views import MethodView
 
+from core import db
 from core.mqtt.handler import publish_message
 from .models import User
 
@@ -58,3 +57,49 @@ class DataAPI(MethodView):
             }
             return make_response(jsonify(response_object)), 401
 
+
+class ControlAPI(MethodView):
+    """
+    Control API
+    """
+
+    def post(self):
+        post_data = request.get_json(force=True)
+        command_type = post_data.get('type', None)
+        command_data = post_data.get('data', None)
+        if not command_type:
+            response_object = {
+                'status': 'fail',
+                'message': 'Provide type attribute.'
+            }
+            return make_response(jsonify(response_object)), 401
+        if not command_data:
+            response_object = {
+                'status': 'fail',
+                'message': 'Provide data attribute.'
+            }
+            return make_response(jsonify(response_object)), 401
+
+        if command_type == 'new_thing':
+            name = command_data.get('name', None)
+            user = User(
+                name=name
+            )
+            user.token = user.encode_auth_token(user.id)
+            # insert the user
+            db.session.add(user)
+            db.session.commit()
+            # generate the auth token
+            auth_token = user.encode_auth_token(user.id)
+            response_object = {
+                'status': 'success',
+                'message': 'Successfully registered.',
+                'auth_token': auth_token.decode()
+            }
+            return make_response(jsonify(response_object)), 201
+        else:
+            response_object = {
+                'status': 'fail',
+                'message': 'Requested type not supported.'
+            }
+            return make_response(jsonify(response_object)), 401

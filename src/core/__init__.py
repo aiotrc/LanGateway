@@ -17,7 +17,7 @@ app.config.from_object(app_settings)
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 
-from core.control import data_blueprint
+from core.control import blueprint
 
-app.register_blueprint(data_blueprint)
+app.register_blueprint(blueprint)
 
