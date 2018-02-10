@@ -1,73 +1,67 @@
 """
 MQTT Handler
 """
-from json.decoder import JSONDecodeError
-from paho.mqtt.client import Client, MQTTv311
 import json
 
-from core.mqtt.config import publish_name, client_name, broker_address, broker_port, message_topic
-from core.socketio_runner import send_message
+from flask_socketio import SocketIO
+from paho.mqtt.client import Client, MQTTv311
+from paho.mqtt.publish import single
+# 172.23.132.37 / iot.eclipse.org
 
+class MqttHandler:
+    def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
+        self.client_id = client_id
+        self.client = Client(client_id=self.client_id, protocol=MQTTv311)
+        self.client.on_message = self.on_message_callback
+        self.client.on_publish = self.on_publish_callback
+        self.client.on_connect = self.connect_callback
+        self.client.on_disconnect = self.disconnect_callback
+        self.topic = topic
+        self.broker_host = broker_host
+        self.broker_port = broker_port
 
-def json_validation(my_json: json):
-    print("json_validation")
-    try:
-        if my_json['id'] is None or my_json['byte_stream'] is None:
-            return False
-    except KeyError:
-        return False
-    return True
+    def connect(self):
+        self.client.connect(host=self.broker_host, port=self.broker_port)
 
+    def connect_callback(self, client, userdata, flags, rc):
+        print('connect_callback: result code[' + str(rc) + ']')
+        client.subscribe(topic=self.topic)
 
-def is_valid(s: str):
-    try:
-        j = json.loads(s)
-        if json_validation(j):
-            return j
-    except JSONDecodeError:
-        return False
+    def disconnect_callback(self, client, userdata, rc):
+        print('disconnect_callback')
 
+    def is_valid(self, my_json: json):
+        print("json_validation")
+        # try:
+        #     if my_json['id'] is None or my_json['byte_stream'] is None:
+        #         return False
+        # except KeyError:
+        #     return False
+        return True
 
-def push(s: str):
-    j = is_valid(s)
-    if not j:
-        return False
-    return True
+    def on_message_callback(self, client, userdata, message):
+        print('on_message_callback: topic[' + message.topic + ']')
+        if self.is_valid(message.payload):
+            socketio = SocketIO()
+            socketio.emit(message.topic, {'data': message.payload})
+        else:
+            print('Message payload not valid')
 
+    @staticmethod
+    def publish_single_message(topic, payload=None, qos=0, retain=False, hostname="localhost",
+                               port=1883, client_id="", keepalive=60, will=None, auth=None, tls=None):
+        print("publish_single_message")
+        single(topic=topic, payload=payload, qos=qos, retain=retain, hostname=hostname, port=port, client_id=client_id,
+               keepalive=keepalive, will=will, auth=auth, tls=tls)
 
-def on_message_callback(client, userdata, message):
-    print('on_message_callback: topic[' + message.topic + ']')
-    if is_valid(message.payload):
-        send_message(message.payload)
-    else:
-        print('Message payload not valid')
+    def on_publish_callback(self, client, userdata, mid):
+        print('on_publish_callback')
 
-
-def on_publish_callback(client, userdata, mid):
-    print('on_publish_callback')
-
-
-def connect_callback(client, userdata, flags, rc):
-    print('connect_callback: result code[' + str(rc) + ']')
-    client.subscribe(publish_name)
-
-
-def disconnect_callback(client, userdata, self):
-    print('disconnect_callback')
-
-
-def publish_message(message):
-    print("publish_message")
-    publish_client = Client(client_id=client_name, protocol=MQTTv311)
-    publish_client.publish(topic=message_topic, payload=message)
+    def loop_for_ever(self):
+        self.client.loop_forever()
 
 
 if __name__ == '__main__':
-    client = Client(client_id=client_name, protocol=MQTTv311)
-    client.on_message = on_message_callback
-    client.on_publish = on_publish_callback
-    client.on_connect = connect_callback
-    client.on_disconnect = disconnect_callback
-    client.connect(host=broker_address, port=broker_port)
-    client.loop_forever()
-
+    mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC', broker_host='172.23.132.37')
+    mqtt_handler.connect()
+    mqtt_handler.loop_for_ever()
