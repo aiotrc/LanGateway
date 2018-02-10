@@ -7,6 +7,8 @@ from flask_socketio import SocketIO
 from paho.mqtt.client import Client, MQTTv311
 from paho.mqtt.publish import single
 
+# 172.23.132.37 / iot.eclipse.org
+BROKER_SERVER = '172.23.132.37'
 
 class MqttHandler:
     def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
@@ -62,7 +64,6 @@ class MqttHandler:
 
 
 if __name__ == '__main__':
-    # 172.23.132.37 / iot.eclipse.org
-    mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC', broker_host='172.23.132.37')
+    mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC', broker_host=BROKER_SERVER)
     mqtt_handler.connect()
     mqtt_handler.loop_for_ever()

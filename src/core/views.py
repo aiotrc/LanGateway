@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 from flask.views import MethodView
 
 from core import db
-from core.mqtt_handler import MqttHandler
+from core.mqtt_handler import MqttHandler, BROKER_SERVER
 from .models import User
 
 
@@ -39,7 +39,7 @@ class DataAPI(MethodView):
                     return make_response(jsonify(response_object)), 401
                 # send data to platform
                 mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC',
-                                           broker_host='iot.eclipse.org')
+                                           broker_host=BROKER_SERVER)
                 mqtt_handler.publish_single_message(topic=mqtt_handler.topic, payload=data,
                                                     hostname=mqtt_handler.broker_host,
                                                     client_id=mqtt_handler.client_id)
