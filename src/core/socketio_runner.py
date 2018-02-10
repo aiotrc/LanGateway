@@ -1,7 +1,7 @@
 from flask_socketio import SocketIO, send
 
 from core import app
-from core.mqtt.handler import MqttHandler
+from core.mqtt_handler import MqttHandler
 
 socketio = SocketIO(app)
 

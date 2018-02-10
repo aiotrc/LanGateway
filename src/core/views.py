@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 from flask.views import MethodView
 
 from core import db
-from core.mqtt.handler import MqttHandler
+from core.mqtt_handler import MqttHandler
 from .models import User
 
 
