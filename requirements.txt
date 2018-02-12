@@ -11,3 +11,4 @@ PyJWT
 validators
 SQLAlchemy
 paho-mqtt
+socketIO-client

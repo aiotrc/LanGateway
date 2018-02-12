@@ -8,7 +8,12 @@ from paho.mqtt.client import Client, MQTTv311
 from paho.mqtt.publish import single
 
 # 172.23.132.37 / iot.eclipse.org
-BROKER_SERVER = '172.23.132.37'
+from core import app
+
+MQTT_TOPIC = 'LAN_GATEWAY_TOPIC'
+MQTT_CLIENT_ID = 'LAN_GATEWAY'
+MQTT_BROKER_HOST = '172.23.132.37'
+
 
 class MqttHandler:
     def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
@@ -42,10 +47,12 @@ class MqttHandler:
         return True
 
     def on_message_callback(self, client, userdata, message):
+        from core.socketio_runner import COMMAND_TOPIC
         print('on_message_callback: topic[' + message.topic + ']')
         if self.is_valid(message.payload):
-            socketio = SocketIO()
-            socketio.emit(message.topic, {'data': message.payload})
+            socketio = SocketIO(app)
+            socketio.emit(COMMAND_TOPIC, {'command': message.payload.get('command'),
+                                          'args': message.payload.get('args')}, json=True)
         else:
             print('Message payload not valid')
 
@@ -64,6 +71,6 @@ class MqttHandler:
 
 
 if __name__ == '__main__':
-    mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC', broker_host=BROKER_SERVER)
+    mqtt_handler = MqttHandler(client_id=MQTT_CLIENT_ID, topic=MQTT_TOPIC, broker_host=MQTT_BROKER_HOST)
     mqtt_handler.connect()
     mqtt_handler.loop_for_ever()
