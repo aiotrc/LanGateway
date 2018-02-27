@@ -21,6 +21,7 @@ migrate = Migrate(app, db)
 # migrations
 manager.add_command('db', MigrateCommand)
 
+
 @manager.command
 def create_db():
     """Creates the db tables."""
@@ -33,7 +34,15 @@ def drop_db():
     db.drop_all()
 
 
-if __name__ == '__main__':
-    http_server = WSGIServer(('localhost', 5000), app, keyfile='server.key', certfile='server.crt')
+def start_http_server():
+    http_server = make_http_server()
     http_server.serve_forever()
 
+
+def make_http_server():
+    http_server = WSGIServer(('localhost', 5000), app, keyfile='server.key', certfile='server.crt')
+    return http_server
+
+
+if __name__ == '__main__':
+    start_http_server()

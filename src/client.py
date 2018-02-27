@@ -1,10 +1,13 @@
 import logging
 import random
 import threading
+import os
 from multiprocessing import Process
 
 from requests import post
 from socketIO_client import BaseNamespace, SocketIO
+
+from src import ROOT_DIR
 
 COMMAND_TOPIC = 'command'
 COMMAND_RESPONSE_TOPIC = 'command_response'
@@ -22,12 +25,14 @@ data_rate = 10
 
 
 def send_data_https():
+    pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
     result = post('https://{}:{}/data'.format(HTTPS_HOST, HTTPS_PORT), json=dict(
         token='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1MjAyNTAwMDIsImlhdCI6MTUxNzY1ODAwMiwic3ViIjoxfQ'
               '.L5SZVHC1Pc2jdV88SP2a0Son6jDbUnSCbtaq8I_P9fQ',
         data='{"temp":"20"}'
-    ), verify='server.pem')
+    ), verify=pem_file_path)
     print(result.text)
+    return result
 
 
 class SocketioNamespace(BaseNamespace):
