@@ -17,6 +17,7 @@ DATA_RESPONSE_TOPIC = 'data_response'
 
 HTTPS_HOST = 'localhost'
 HTTPS_PORT = 5000
+HTTPS_DATA_URI = 'https://{}:{}/data'.format(HTTPS_HOST, HTTPS_PORT)
 
 SOCKETIO_HOST = 'localhost'
 SOCKETIO_PORT = 5001
@@ -26,12 +27,11 @@ data_rate = 10
 
 def send_data_https():
     pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
-    result = post('https://{}:{}/data'.format(HTTPS_HOST, HTTPS_PORT), json=dict(
+    result = post(HTTPS_DATA_URI, json=dict(
         token='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1MjAyNTAwMDIsImlhdCI6MTUxNzY1ODAwMiwic3ViIjoxfQ'
               '.L5SZVHC1Pc2jdV88SP2a0Son6jDbUnSCbtaq8I_P9fQ',
         data='{"temp":"20"}'
     ), verify=pem_file_path)
-    print(result.text)
     return result
 
 
@@ -87,7 +87,8 @@ def stop_all(processes=None):
 
 
 if __name__ == '__main__':
-    send_data_https()
+    result = send_data_https()
+    print(result)
     logging.getLogger('socketIO-client').setLevel(logging.DEBUG)
     logging.basicConfig()
     p_listen = Process(target=socketio_start_listening, args=())

@@ -45,4 +45,5 @@ def make_http_server():
 
 
 if __name__ == '__main__':
+    create_db()
     start_http_server()
