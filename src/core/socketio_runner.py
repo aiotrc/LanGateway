@@ -26,6 +26,9 @@ def handle_data(data_json):
 @socketio.on(COMMAND_RESPONSE_TOPIC)
 def handle_command_response(command_response_json):
     print('received json: ' + str(command_response_json))
+    MqttHandler.publish_single_message(topic=MQTT_TOPIC, payload=str(command_response_json),
+                                       hostname=MQTT_BROKER_HOST,
+                                       client_id=MQTT_CLIENT_ID)
 
 
 if __name__ == '__main__':
