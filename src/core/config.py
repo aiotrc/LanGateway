@@ -1,8 +1,8 @@
 import os
 
-
 basedir = os.path.abspath(os.path.dirname(__file__))
-postgres_local_base = 'postgresql://postgres:password@localhost/'
+postgres_local_base = 'postgresql://postgres:{password}@localhost/'.format(
+    password=os.getenv('POSTGRES_PASS', 'password'))
 database_name = 'postgres'
 
 

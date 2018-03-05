@@ -1,3 +1,0 @@
--r requirements.txt
-httpretty==0.8.14
-pipreqs==0.4.9
