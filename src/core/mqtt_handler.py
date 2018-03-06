@@ -13,12 +13,14 @@ from core import app
 MQTT_TOPIC = 'LAN_GATEWAY_TOPIC'
 MQTT_CLIENT_ID = 'LAN_GATEWAY'
 MQTT_BROKER_HOST = '172.23.132.37'
+MQTT_PROTOCOL_VERSION = MQTTv311
 
 
 class MqttHandler:
     def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
+        self.subscribed = False
         self.client_id = client_id
-        self.client = Client(client_id=self.client_id, protocol=MQTTv311)
+        self.client = Client(client_id=self.client_id, protocol=MQTT_PROTOCOL_VERSION)
         self.client.on_message = self.on_message_callback
         self.client.on_publish = self.on_publish_callback
         self.client.on_connect = self.connect_callback
@@ -30,9 +32,16 @@ class MqttHandler:
     def connect(self):
         self.client.connect(host=self.broker_host, port=self.broker_port)
 
+    def connect_async(self):
+        self.client.connect_async(host=self.broker_host, port=self.broker_port)
+
     def connect_callback(self, client, userdata, flags, rc):
         print('connect_callback: result code[' + str(rc) + ']')
-        client.subscribe(topic=self.topic)
+        (result, _) = client.subscribe(topic=self.topic)
+        self.subscribed = result
+
+    def disconnect(self):
+        self.client.disconnect()
 
     def disconnect_callback(self, client, userdata, rc):
         print('disconnect_callback')
@@ -47,14 +56,13 @@ class MqttHandler:
         return True
 
     def on_message_callback(self, client, userdata, message):
-        from core.socketio_runner import COMMAND_TOPIC
-        print('on_message_callback: topic[' + message.topic + ']')
-        if self.is_valid(message.payload):
-            socketio = SocketIO(app)
-            socketio.emit(COMMAND_TOPIC, {'command': message.payload.get('command'),
-                                          'args': message.payload.get('args')}, json=True)
+        from core.socketio_runner import emit_command
+        topic = message.topic
+        payload = message.payload
+        if self.is_valid(payload):
+            emit_command(topic, payload)
         else:
-            print('Message payload not valid')
+            raise Exception('Message payload not valid')
 
     @staticmethod
     def publish_single_message(topic, payload=None, qos=0, retain=False, hostname="localhost",
@@ -68,6 +76,9 @@ class MqttHandler:
 
     def loop_for_ever(self):
         self.client.loop_forever()
+
+    def loop_start(self):
+        self.client.loop_start()
 
 
 if __name__ == '__main__':

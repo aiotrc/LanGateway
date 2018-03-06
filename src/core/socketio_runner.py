@@ -2,7 +2,7 @@ import random
 
 from flask_socketio import SocketIO, emit
 
-from core import app
+from core import app, app_settings
 from core.mqtt_handler import MqttHandler, MQTT_TOPIC, MQTT_BROKER_HOST, MQTT_CLIENT_ID
 
 COMMAND_TOPIC = 'command'
@@ -29,6 +29,14 @@ def handle_command_response(command_response_json):
     MqttHandler.publish_single_message(topic=MQTT_TOPIC, payload=str(command_response_json),
                                        hostname=MQTT_BROKER_HOST,
                                        client_id=MQTT_CLIENT_ID)
+
+
+def emit_command(topic, payload):
+    if app_settings.DEBUG:
+        print('on_message_callback: topic[' + topic + ']')
+    socketio = SocketIO(app)
+    socketio.emit(COMMAND_TOPIC, {'command': payload.get('command'),
+                                  'args': payload.get('args')}, json=True)
 
 
 if __name__ == '__main__':
