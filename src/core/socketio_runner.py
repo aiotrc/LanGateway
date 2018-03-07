@@ -32,7 +32,7 @@ def handle_command_response(command_response_json):
 
 
 def emit_command(topic, payload):
-    if app_settings.DEBUG:
+    if app.config.get('DEBUG', False):
         print('on_message_callback: topic[' + topic + ']')
     socketio = SocketIO(app)
     socketio.emit(COMMAND_TOPIC, {'command': payload.get('command'),

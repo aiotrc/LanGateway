@@ -8,7 +8,7 @@ from paho.mqtt.client import Client, MQTTv311
 from paho.mqtt.publish import single
 
 # 172.23.132.37 / iot.eclipse.org
-from core import app
+from core import app, app_settings
 
 MQTT_TOPIC = 'LAN_GATEWAY_TOPIC'
 MQTT_CLIENT_ID = 'LAN_GATEWAY'
@@ -67,7 +67,8 @@ class MqttHandler:
     @staticmethod
     def publish_single_message(topic, payload=None, qos=0, retain=False, hostname="localhost",
                                port=1883, client_id="", keepalive=60, will=None, auth=None, tls=None):
-        print("publish_single_message")
+        if app.config.get('DEBUG', False):
+            print("publish_single_message")
         single(topic=topic, payload=payload, qos=qos, retain=retain, hostname=hostname, port=port, client_id=client_id,
                keepalive=keepalive, will=will, auth=auth, tls=tls)
 
@@ -79,6 +80,9 @@ class MqttHandler:
 
     def loop_start(self):
         self.client.loop_start()
+
+    def loop_stop(self, force=False):
+        self.client.loop_stop(force=force)
 
 
 if __name__ == '__main__':
