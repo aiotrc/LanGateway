@@ -3,18 +3,18 @@ MQTT Handler
 """
 import json
 
-from flask_socketio import SocketIO
 from paho.mqtt.client import Client, MQTTv311
 from paho.mqtt.publish import single
 
 # 172.23.132.37 / iot.eclipse.org
-from core import app, app_settings
+from core import app
 
 MQTT_TOPIC = 'LAN_GATEWAY_TOPIC'
 MQTT_CLIENT_ID = 'LAN_GATEWAY'
 MQTT_BROKER_HOST = '172.23.132.37'
 MQTT_PROTOCOL_VERSION = MQTTv311
 
+USER_DATA_MESSAGE_RECEIVED = 'message_received'
 
 class MqttHandler:
     def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
@@ -28,6 +28,11 @@ class MqttHandler:
         self.topic = topic
         self.broker_host = broker_host
         self.broker_port = broker_port
+        self.message_received = 0
+        userdata = {
+            USER_DATA_MESSAGE_RECEIVED: 0,
+        }
+        self.client.user_data_set(userdata)
 
     def connect(self):
         self.client.connect(host=self.broker_host, port=self.broker_port)
@@ -47,7 +52,8 @@ class MqttHandler:
         print('disconnect_callback')
 
     def is_valid(self, my_json: json):
-        print("json_validation")
+        if app.config.get('DEBUG', False):
+            print("json_validation")
         # try:
         #     if my_json['id'] is None or my_json['byte_stream'] is None:
         #         return False
@@ -57,8 +63,15 @@ class MqttHandler:
 
     def on_message_callback(self, client, userdata, message):
         from core.socketio_runner import emit_command
+
+        userdata[USER_DATA_MESSAGE_RECEIVED] += 1
+
         topic = message.topic
-        payload = message.payload
+        payload = json.loads(message.payload)
+
+        if app.config.get('DEBUG', False):
+            print('on_message_callback: topic[' + topic + ']')
+
         if self.is_valid(payload):
             emit_command(topic, payload)
         else:
