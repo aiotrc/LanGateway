@@ -1,3 +1,6 @@
+import datetime
+
+import jwt
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from gevent.wsgi import WSGIServer
@@ -5,8 +8,8 @@ from gevent.wsgi import WSGIServer
 from core import app, db
 
 # payload = {
-#     'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
-#     'iat': datetime.datetime.utcnow(),
+#     'exp': datetime.datetime.utcnow(),
+#     'iat': datetime.datetime.utcnow() - datetime.timedelta(days=30),
 #     'sub': 1
 # }
 # token = jwt.encode(
@@ -46,4 +49,4 @@ def make_http_server():
 
 if __name__ == '__main__':
     create_db()
-    start_http_server()
+    # start_http_server()

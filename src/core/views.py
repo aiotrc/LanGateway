@@ -1,9 +1,51 @@
+import datetime
+
 from flask import request, make_response, jsonify
 from flask.views import MethodView
+from flask_login import login_user, login_required
 
-from core import db
+from core import db, app
 from core.mqtt_handler import MqttHandler, MQTT_BROKER_HOST
 from .models import User
+
+BAD_FORMAT_MESSAGE = 'Request data format should be JSON'
+BAD_TOKEN_MESSAGE = 'Provide a valid core token'
+BLACK_LIST_TOKEN_MESSAGE = 'Token blacklisted'
+TOKEN_EXPIRED_MESSAGE = 'Signature expired'
+INVALID_TOKEN_MESSAGE = 'Invalid token'
+LOGIN_MESSAGE = 'Logged in'
+
+
+class LoginAPI(MethodView):
+
+    def post(self):
+        try:
+            post_data = request.get_json(force=True)
+        except:
+            return self.generate_response('fail', BAD_FORMAT_MESSAGE)
+
+        auth_token = post_data.get('token', None)
+
+        if auth_token:
+            resp = User.decode_auth_token(auth_token)
+            # check whether a user id is returned
+            if not isinstance(resp, str):
+                user = User.query.filter_by(id=resp).first()
+                login_user(user=user, remember=True,
+                           duration=datetime.timedelta(days=app.config.get('LOGIN_REMEMBER_DAYS', 10)))
+                return self.generate_response('success', LOGIN_MESSAGE)
+            else:
+                return self.generate_response('fail', resp)
+        else:
+            return self.generate_response('fail', BAD_TOKEN_MESSAGE)
+
+    @staticmethod
+    def generate_response(status, message):
+        response_object = {
+            'status': status,
+            'message': message
+        }
+        return make_response(jsonify(response_object)), 401
 
 
 class DataAPI(MethodView):
@@ -11,6 +53,7 @@ class DataAPI(MethodView):
     Data Manipulation API
     """
 
+    @login_required
     def post(self):
         # send data request
         post_data = request.get_json(force=True)

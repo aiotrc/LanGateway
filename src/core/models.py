@@ -4,6 +4,8 @@ import jwt
 
 from core import db, app
 
+JWT_ALGORITHM = 'HS256'
+
 
 class User(db.Model):
     """ User Model for storing user related details """
@@ -30,29 +32,29 @@ class User(db.Model):
             return jwt.encode(
                 payload,
                 app.config.get('SECRET_KEY'),
-                algorithm='HS256'
-            )
+                algorithm=JWT_ALGORITHM)
         except Exception as e:
             return e
 
     @staticmethod
     def decode_auth_token(auth_token):
+        from core.views import BLACK_LIST_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, INVALID_TOKEN_MESSAGE
         """
         Validates the core token
         :param auth_token:
         :return: integer|string
         """
         try:
-            payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'))
+            payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'), algorithms=JWT_ALGORITHM)
             is_blacklisted_token = BlacklistToken.check_blacklist(auth_token)
             if is_blacklisted_token:
-                return 'Token blacklisted.'
+                return BLACK_LIST_TOKEN_MESSAGE
             else:
                 return payload['sub']
         except jwt.ExpiredSignatureError:
-            return 'Signature expired.'
+            return TOKEN_EXPIRED_MESSAGE
         except jwt.InvalidTokenError:
-            return 'Invalid token.'
+            return INVALID_TOKEN_MESSAGE
 
 
 class BlacklistToken(db.Model):
