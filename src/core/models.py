@@ -1,13 +1,15 @@
 import datetime
 
 import jwt
+from flask_login import UserMixin
 
 from core import db, app
+from core import login_manager
 
 JWT_ALGORITHM = 'HS256'
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     """ User Model for storing user related details """
     __tablename__ = "users"
 
@@ -45,7 +47,8 @@ class User(db.Model):
         :return: integer|string
         """
         try:
-            payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'), algorithms=JWT_ALGORITHM)
+            payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'), algorithms=JWT_ALGORITHM,
+                                 verify_exp=True)
             is_blacklisted_token = BlacklistToken.check_blacklist(auth_token)
             if is_blacklisted_token:
                 return BLACK_LIST_TOKEN_MESSAGE
@@ -57,6 +60,11 @@ class User(db.Model):
             return INVALID_TOKEN_MESSAGE
 
 
+@login_manager.user_loader
+def get_user(ident):
+    return User.query.get(int(ident))
+
+
 class BlacklistToken(db.Model):
     """
     Token Model for storing JWT tokens
@@ -64,7 +72,7 @@ class BlacklistToken(db.Model):
     __tablename__ = 'blacklist_tokens'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    token = db.Column(db.String(500), unique=True, nullable=False)
+    token = db.Column(db.String(1000), unique=True, nullable=False)
     blacklisted_on = db.Column(db.DateTime, nullable=False)
 
     def __init__(self, token):
