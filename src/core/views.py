@@ -5,15 +5,18 @@ from flask.views import MethodView
 from flask_login import login_user, login_required
 
 from core import db, app
-from core.mqtt_handler import MqttHandler, MQTT_BROKER_HOST
+from core.mqtt_handler import MqttHandler, MQTT_BROKER_HOST, MQTT_CLIENT_ID, MQTT_TOPIC
 from .models import User
 
+SUCCESS = 'success'
+FAIL = 'fail'
 BAD_FORMAT_MESSAGE = 'Request data format should be JSON'
 BAD_TOKEN_MESSAGE = 'Provide a valid core token'
 BLACK_LIST_TOKEN_MESSAGE = 'Token blacklisted'
 TOKEN_EXPIRED_MESSAGE = 'Signature expired'
 INVALID_TOKEN_MESSAGE = 'Invalid token'
 LOGIN_MESSAGE = 'Logged in'
+FIELD_IS_MISSING = lambda field_name: '{} field is missing'.format(field_name)
 
 
 class LoginAPI(MethodView):
@@ -22,7 +25,7 @@ class LoginAPI(MethodView):
         try:
             post_data = request.get_json(force=True)
         except:
-            return self.generate_response('fail', BAD_FORMAT_MESSAGE)
+            return generate_response(FAIL, BAD_FORMAT_MESSAGE)
 
         auth_token = post_data.get('token', None)
 
@@ -33,19 +36,11 @@ class LoginAPI(MethodView):
                 user = User.query.filter_by(id=resp).first()
                 login_user(user=user, remember=True,
                            duration=datetime.timedelta(days=app.config.get('LOGIN_REMEMBER_DAYS', 10)))
-                return self.generate_response('success', LOGIN_MESSAGE)
+                return generate_response(SUCCESS, LOGIN_MESSAGE)
             else:
-                return self.generate_response('fail', resp)
+                return generate_response(FAIL, resp)
         else:
-            return self.generate_response('fail', BAD_TOKEN_MESSAGE)
-
-    @staticmethod
-    def generate_response(status, message):
-        response_object = {
-            'status': status,
-            'message': message
-        }
-        return make_response(jsonify(response_object)), 401
+            return generate_response(FAIL, BAD_TOKEN_MESSAGE)
 
 
 class DataAPI(MethodView):
@@ -56,53 +51,23 @@ class DataAPI(MethodView):
     @login_required
     def post(self):
         # send data request
-        post_data = request.get_json(force=True)
-        auth_token = post_data.get('token', None)
-        # check for token field
-        if auth_token:
-            resp = User.decode_auth_token(auth_token)
-            # check whether a user id is returned
-            if not isinstance(resp, str):
+        try:
+            post_data = request.get_json(force=True)
+        except:
+            return generate_response(FAIL, BAD_FORMAT_MESSAGE)
 
-                data = post_data.get('data', None)
-                # check for data field
-                if not data:
-                    response_object = {
-                        'status': 'fail',
-                        'message': 'data required'
-                    }
-                    return make_response(jsonify(response_object)), 401
-                user = User.query.filter_by(id=resp).first()
-                # check whether user with provided id exists in database
-                if user is None:
-                    response_object = {
-                        'status': 'fail',
-                        'message': 'User is not valid'
-                    }
-                    return make_response(jsonify(response_object)), 401
-                # send data to platform
-                mqtt_handler = MqttHandler(client_id='LAN_GATEWAY', topic='LAN_GATEWAY_TOPIC',
-                                           broker_host=MQTT_BROKER_HOST)
-                mqtt_handler.publish_single_message(topic=mqtt_handler.topic, payload=data,
-                                                    hostname=mqtt_handler.broker_host,
-                                                    client_id=mqtt_handler.client_id)
-                response_object = {
-                    'status': 'success',
-                    'message': 'Data transferred'
-                }
-                # return result from endpoint
-                return make_response(jsonify(response_object)), 200
-            response_object = {
-                'status': 'fail',
-                'message': resp
-            }
-            return make_response(jsonify(response_object)), 401
-        else:
-            response_object = {
-                'status': 'fail',
-                'message': 'Provide a valid core token.'
-            }
-            return make_response(jsonify(response_object)), 401
+        data = post_data.get('data', None)
+
+        if not data:
+            return generate_response('fail', FIELD_IS_MISSING('data'))
+
+        # send data to platform
+        mqtt_handler = MqttHandler(client_id=MQTT_CLIENT_ID, topic=MQTT_TOPIC,
+                                   broker_host=MQTT_BROKER_HOST)
+        mqtt_handler.publish_single_message(topic=mqtt_handler.topic, payload=data,
+                                            hostname=mqtt_handler.broker_host,
+                                            client_id=mqtt_handler.client_id)
+        return generate_response(SUCCESS, LOGIN_MESSAGE)
 
 
 class ControlAPI(MethodView):
@@ -150,3 +115,14 @@ class ControlAPI(MethodView):
                 'message': 'Requested type not supported.'
             }
             return make_response(jsonify(response_object)), 401
+
+
+def generate_response(status, message):
+    response_object = {
+        'status': status,
+        'message': message
+    }
+    code = 200
+    if status == FAIL:
+        code = 401
+    return make_response(jsonify(response_object)), code

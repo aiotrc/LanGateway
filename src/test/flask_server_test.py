@@ -1,7 +1,9 @@
 import unittest
 
+from flask_login import login_user, LoginManager
+
 from core import db, app
-from core.control import LOGIN_PATH
+from core.control import LOGIN_PATH, DATA_PATH
 from core.models import User
 from core.views import BAD_FORMAT_MESSAGE, BAD_TOKEN_MESSAGE, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
     LOGIN_MESSAGE
@@ -42,7 +44,7 @@ class TestFlaskAPIs(unittest.TestCase):
         db.session.remove()
         db.drop_all()
 
-    def test_login_bad_format_request(self):
+    def test_login_bad_request_format(self):
         rv = self.client.post(LOGIN_PATH)
         assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
 
@@ -61,6 +63,10 @@ class TestFlaskAPIs(unittest.TestCase):
     def test_login_with_valid_token(self):
         rv = self.client.post(LOGIN_PATH, data='{"token":"' + self.valid_token + '"}')
         assert str.encode(LOGIN_MESSAGE) in rv.data
+
+    def test_send_data_bad_request_format(self):
+        rv = self.client.post(DATA_PATH)
+        assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
 
 
 if __name__ == '__main__':
