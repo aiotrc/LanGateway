@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from flask import request, make_response, jsonify
 from flask_login import logout_user
@@ -9,17 +10,31 @@ from core import db, app
 from core.mqtt_handler import MqttHandler, MQTT_BROKER_HOST, MQTT_CLIENT_ID, MQTT_TOPIC
 from .models import User
 
+MESSAGE = 'message'
+STATUS = 'status'
 SUCCESS = 'success'
 FAIL = 'fail'
+
 BAD_FORMAT_MESSAGE = 'Request data format should be JSON'
-BAD_TOKEN_MESSAGE = 'Provide a valid core token'
+FIELD_IS_MISSING = lambda field_name: '{} field is missing'.format(field_name)
+
+TOKEN_FIELD = 'token'
 BLACK_LIST_TOKEN_MESSAGE = 'Token blacklisted'
 TOKEN_EXPIRED_MESSAGE = 'Signature expired'
 INVALID_TOKEN_MESSAGE = 'Invalid token'
 LOGIN_MESSAGE = 'Logged in'
+
 LOGOUT_MESSAGE = 'Logged out'
-FIELD_IS_MISSING = lambda field_name: '{} field is missing'.format(field_name)
+
+DATA_FIELD = 'data'
 DATA_SENT_MESSAGE = 'Data Sent'
+
+COMMAND_TYPE_FIELD = 'type'
+COMMAND_ARGS_FIELD = 'args'
+COMMAND_TYPE_NEW_THING = 'new_thing'
+COMMAND_SUCCESSFUL_MESSAGE = lambda command_type: 'Command {} run successfully'.format(command_type)
+BAD_COMMAND_MESSAGE = 'Command type not supported'
+NAME_FIELD = 'name'
 
 
 class LoginAPI(MethodView):
@@ -33,7 +48,7 @@ class LoginAPI(MethodView):
         except:
             return generate_response(FAIL, BAD_FORMAT_MESSAGE)
 
-        auth_token = post_data.get('token', None)
+        auth_token = post_data.get(TOKEN_FIELD, None)
 
         if auth_token:
             resp = User.decode_auth_token(auth_token)
@@ -46,7 +61,7 @@ class LoginAPI(MethodView):
             else:
                 return generate_response(FAIL, resp)
         else:
-            return generate_response(FAIL, BAD_TOKEN_MESSAGE)
+            return generate_response(FAIL, FIELD_IS_MISSING(TOKEN_FIELD))
 
 
 class LogoutAPI(MethodView):
@@ -69,10 +84,10 @@ class DataAPI(MethodView):
         except:
             return generate_response(FAIL, BAD_FORMAT_MESSAGE)
 
-        data = post_data.get('data', None)
+        data = post_data.get(DATA_FIELD, None)
 
         if not data:
-            return generate_response('fail', FIELD_IS_MISSING('data'))
+            return generate_response(FAIL, FIELD_IS_MISSING(DATA_FIELD))
 
         # send data to platform
         MqttHandler.publish_single_message(topic=MQTT_TOPIC, payload=data,
@@ -82,56 +97,44 @@ class DataAPI(MethodView):
 
 
 class ControlAPI(MethodView):
-    """
-    Control API
-    """
-
     def post(self):
-        post_data = request.get_json(force=True)
-        command_type = post_data.get('type', None)
-        command_data = post_data.get('data', None)
-        if not command_type:
-            response_object = {
-                'status': 'fail',
-                'message': 'Provide type attribute.'
-            }
-            return make_response(jsonify(response_object)), 401
-        if not command_data:
-            response_object = {
-                'status': 'fail',
-                'message': 'Provide data attribute.'
-            }
-            return make_response(jsonify(response_object)), 401
+        """
+        receives command and executes it
+        Request: data:{"type":"new_thing", "args":{"name":"<thing name>"}}
+        :return: error or command successful message with results
+        """
+        print(request.host)
+        try:
+            post_data = request.get_json(force=True)
+        except:
+            return generate_response(FAIL, BAD_FORMAT_MESSAGE)
 
-        if command_type == 'new_thing':
-            name = command_data.get('name', None)
-            user = User(
-                name=name
-            )
-            user.token = user.encode_auth_token(user.id)
-            # insert the user
+        command_type = post_data.get(COMMAND_TYPE_FIELD, None)
+        command_args = post_data.get(COMMAND_ARGS_FIELD, None)
+
+        if not command_type:
+            return generate_response(FAIL, FIELD_IS_MISSING(COMMAND_TYPE_FIELD))
+        if not command_args:
+            return generate_response(FAIL, FIELD_IS_MISSING(COMMAND_ARGS_FIELD))
+
+        if command_type == COMMAND_TYPE_NEW_THING:
+            name = command_args.get(NAME_FIELD, None)
+            user = User(name=name)
+
             db.session.add(user)
             db.session.commit()
-            # generate the auth token
-            auth_token = user.encode_auth_token(user.id)
-            response_object = {
-                'status': 'success',
-                'message': 'Successfully registered.',
-                'auth_token': auth_token.decode()
-            }
-            return make_response(jsonify(response_object)), 200
+
+            auth_token = user.encode_auth_token(user.id).decode('utf-8')
+
+            return generate_response(SUCCESS, json.dumps({TOKEN_FIELD: auth_token}))
         else:
-            response_object = {
-                'status': 'fail',
-                'message': 'Requested type not supported.'
-            }
-            return make_response(jsonify(response_object)), 401
+            return generate_response(FAIL, BAD_COMMAND_MESSAGE)
 
 
 def generate_response(status, message):
     response_object = {
-        'status': status,
-        'message': message
+        STATUS: status,
+        MESSAGE: message
     }
     code = 200
     if status == FAIL:

@@ -15,7 +15,6 @@ class User(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=True)
-    token = db.Column(db.String(1000), unique=True, nullable=False)
 
     def __init__(self, name="Unknown"):
         self.name = name

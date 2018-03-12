@@ -1,14 +1,16 @@
+import _thread
+import json
 import unittest
 
-import _thread
-from flask_login import login_user, LoginManager
+from flask import jsonify
 
 from core import db, app
-from core.control import LOGIN_PATH, DATA_PATH, LOGOUT_PATH
+from core.control import LOGIN_PATH, DATA_PATH, LOGOUT_PATH, CONTROL_PATH
 from core.models import User
-from core.mqtt_handler import MQTT_CLIENT_ID, MQTT_BROKER_HOST
-from core.views import BAD_FORMAT_MESSAGE, BAD_TOKEN_MESSAGE, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
-    LOGIN_MESSAGE, FIELD_IS_MISSING, DATA_SENT_MESSAGE, LOGOUT_MESSAGE
+from core.mqtt_handler import MQTT_CLIENT_ID
+from core.views import BAD_FORMAT_MESSAGE, FIELD_IS_MISSING, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
+    LOGIN_MESSAGE, FIELD_IS_MISSING, DATA_SENT_MESSAGE, LOGOUT_MESSAGE, TOKEN_FIELD, DATA_FIELD, COMMAND_TYPE_FIELD, \
+    COMMAND_ARGS_FIELD, BAD_COMMAND_MESSAGE, COMMAND_TYPE_NEW_THING, NAME_FIELD, SUCCESS, MESSAGE
 from test.mqtt_client_test import check_connection_established, check_connection_ack
 from test.paho_mqtt_test_helper.broker import FakeBroker
 
@@ -17,7 +19,6 @@ class TestFlaskAPIsBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = cls.create_app()
-        # cls.app.login_manager.init_app(app)
         cls.client = cls.app.test_client()
         cls.client.testing = True
 
@@ -47,19 +48,18 @@ class TestFlaskAPIsBase(unittest.TestCase):
                               '4uuIsAIpxng-dcPQxXQvN3vjibxxeJpQFcaqBw0z4Eg')
 
         thing1 = User(name='thing1')
-        thing1.id = 1
-        thing1.token = self.expired_token
 
         thing2 = User(name='thing2')
-        thing2.id = 2
-        thing2.token = self.valid_token = thing2.encode_auth_token(thing2.id).decode('utf-8')
+        self.valid_token = thing2.encode_auth_token(1).decode('utf-8')
 
         db.session.add(thing1)
         db.session.add(thing2)
         db.session.commit()
 
-    def login(self):
-        rv = self.client.post(LOGIN_PATH, data='{"token":"' + self.valid_token + '"}')
+    def login(self, token=None):
+        if not token:
+            token = self.valid_token
+        rv = self.client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: token}))
         assert str.encode(LOGIN_MESSAGE) in rv.data
 
     def logout(self):
@@ -67,21 +67,21 @@ class TestFlaskAPIsBase(unittest.TestCase):
         assert str.encode(LOGOUT_MESSAGE) in rv.data
 
 
-class TestLogin(TestFlaskAPIsBase):
+class TestLoginLogout(TestFlaskAPIsBase):
     def test_login_bad_request_format(self):
         rv = self.client.post(LOGIN_PATH)
         assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
 
     def test_login_without_token(self):
-        rv = self.client.post(LOGIN_PATH, data='{"key":"value"}')
-        assert str.encode(BAD_TOKEN_MESSAGE) in rv.data
+        rv = self.client.post(LOGIN_PATH, data=json.dumps({'key': 'value'}))
+        assert str.encode(FIELD_IS_MISSING(TOKEN_FIELD)) in rv.data
 
     def test_login_with_invalid_token(self):
-        rv = self.client.post(LOGIN_PATH, data='{"token":"invalid"}')
+        rv = self.client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: 'invalid'}))
         assert str.encode(INVALID_TOKEN_MESSAGE) in rv.data
 
     def test_login_with_expired_token(self):
-        rv = self.client.post(LOGIN_PATH, data='{"token":"' + self.expired_token + '"}')
+        rv = self.client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: self.expired_token}))
         assert str.encode(TOKEN_EXPIRED_MESSAGE) in rv.data
 
     def test_login_with_valid_token(self):
@@ -110,12 +110,12 @@ class TestDataAPI(TestFlaskAPIsBase):
         assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
 
     def test_send_data_without_required_field(self):
-        rv = self.client.post(DATA_PATH, data='{"key":"value"}')
-        assert str.encode(FIELD_IS_MISSING('')) in rv.data
+        rv = self.client.post(DATA_PATH, data=json.dumps({'key': 'value'}))
+        assert str.encode(FIELD_IS_MISSING(DATA_FIELD)) in rv.data
 
     def test_send_data_with_valid_fields(self):
         def send_request():
-            rv = self.client.post(DATA_PATH, data='{"data":"thing data"}')
+            rv = self.client.post(DATA_PATH, data=json.dumps({DATA_FIELD: 'thing data'}))
             assert str.encode(DATA_SENT_MESSAGE) in rv.data
 
         _thread.start_new_thread(send_request, ())
@@ -126,6 +126,47 @@ class TestDataAPI(TestFlaskAPIsBase):
         check_connection_established(fake_mqtt_broker, MQTT_CLIENT_ID)
         check_connection_ack(fake_mqtt_broker)
         fake_mqtt_broker.receive_packet(1000)
+
+
+class TestControlAPI(TestFlaskAPIsBase):
+    def test_send_command_bad_request_format(self):
+        rv = self.client.post(CONTROL_PATH)
+        assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
+
+    def test_send_command_without_required_fields(self):
+        r1 = self.client.post(CONTROL_PATH, data=json.dumps({'key': 'value'}))
+        r2 = self.client.post(CONTROL_PATH, data=json.dumps({COMMAND_TYPE_FIELD: 'command type'}))
+        assert str.encode(FIELD_IS_MISSING(COMMAND_TYPE_FIELD)) in r1.data
+        assert str.encode(FIELD_IS_MISSING(COMMAND_ARGS_FIELD)) in r2.data
+
+    def test_send_unknown_command(self):
+        rv = self.client.post(CONTROL_PATH,
+                              data=json.dumps({COMMAND_TYPE_FIELD: 'unknown command', COMMAND_ARGS_FIELD: 'arg'}))
+        assert str.encode(BAD_COMMAND_MESSAGE) in rv.data
+
+    def test_send_valid_command(self):
+        new_thing_name = 'another new thing'
+
+        users = User.query.all()
+        num_users_before = len(users)
+
+        rv = self.client.post(CONTROL_PATH,
+                              data=json.dumps({COMMAND_TYPE_FIELD: COMMAND_TYPE_NEW_THING,
+                                               COMMAND_ARGS_FIELD: {NAME_FIELD: new_thing_name}}))
+        assert str.encode(SUCCESS) in rv.data
+
+        users = User.query.all()
+        num_users_after = len(users)
+        assert num_users_after == num_users_before + 1
+
+        response = json.loads(rv.data)
+        message = json.loads(response.get(MESSAGE, None))
+        assert message
+
+        new_token = message.get(TOKEN_FIELD, None)
+        assert new_token
+
+        self.login(token=new_token)
 
 
 if __name__ == '__main__':
