@@ -1,6 +1,7 @@
 import datetime
 
 from flask import request, make_response, jsonify
+from flask_login import logout_user
 from flask.views import MethodView
 from flask_login import login_user, login_required
 
@@ -16,6 +17,7 @@ BLACK_LIST_TOKEN_MESSAGE = 'Token blacklisted'
 TOKEN_EXPIRED_MESSAGE = 'Signature expired'
 INVALID_TOKEN_MESSAGE = 'Invalid token'
 LOGIN_MESSAGE = 'Logged in'
+LOGOUT_MESSAGE = 'Logged out'
 FIELD_IS_MISSING = lambda field_name: '{} field is missing'.format(field_name)
 DATA_SENT_MESSAGE = 'Data Sent'
 
@@ -45,6 +47,13 @@ class LoginAPI(MethodView):
                 return generate_response(FAIL, resp)
         else:
             return generate_response(FAIL, BAD_TOKEN_MESSAGE)
+
+
+class LogoutAPI(MethodView):
+    def post(self):
+        logout_user()
+
+        return generate_response(SUCCESS, LOGOUT_MESSAGE)
 
 
 class DataAPI(MethodView):
@@ -110,7 +119,7 @@ class ControlAPI(MethodView):
                 'message': 'Successfully registered.',
                 'auth_token': auth_token.decode()
             }
-            return make_response(jsonify(response_object)), 201
+            return make_response(jsonify(response_object)), 200
         else:
             response_object = {
                 'status': 'fail',

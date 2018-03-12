@@ -4,20 +4,20 @@ import _thread
 from flask_login import login_user, LoginManager
 
 from core import db, app
-from core.control import LOGIN_PATH, DATA_PATH
+from core.control import LOGIN_PATH, DATA_PATH, LOGOUT_PATH
 from core.models import User
 from core.mqtt_handler import MQTT_CLIENT_ID, MQTT_BROKER_HOST
 from core.views import BAD_FORMAT_MESSAGE, BAD_TOKEN_MESSAGE, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
-    LOGIN_MESSAGE, FIELD_IS_MISSING, DATA_SENT_MESSAGE
+    LOGIN_MESSAGE, FIELD_IS_MISSING, DATA_SENT_MESSAGE, LOGOUT_MESSAGE
 from test.mqtt_client_test import check_connection_established, check_connection_ack
 from test.paho_mqtt_test_helper.broker import FakeBroker
 
 
-class TestFlaskAPIs(unittest.TestCase):
+class TestFlaskAPIsBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = cls.create_app()
-        cls.app.login_manager.init_app(app)
+        # cls.app.login_manager.init_app(app)
         cls.client = cls.app.test_client()
         cls.client.testing = True
 
@@ -58,6 +58,16 @@ class TestFlaskAPIs(unittest.TestCase):
         db.session.add(thing2)
         db.session.commit()
 
+    def login(self):
+        rv = self.client.post(LOGIN_PATH, data='{"token":"' + self.valid_token + '"}')
+        assert str.encode(LOGIN_MESSAGE) in rv.data
+
+    def logout(self):
+        rv = self.client.post(LOGOUT_PATH)
+        assert str.encode(LOGOUT_MESSAGE) in rv.data
+
+
+class TestLogin(TestFlaskAPIsBase):
     def test_login_bad_request_format(self):
         rv = self.client.post(LOGIN_PATH)
         assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
@@ -75,8 +85,25 @@ class TestFlaskAPIs(unittest.TestCase):
         assert str.encode(TOKEN_EXPIRED_MESSAGE) in rv.data
 
     def test_login_with_valid_token(self):
-        rv = self.client.post(LOGIN_PATH, data='{"token":"' + self.valid_token + '"}')
-        assert str.encode(LOGIN_MESSAGE) in rv.data
+        self.login()
+
+    def test_logout(self):
+        self.logout()
+
+
+class TestDataAPI(TestFlaskAPIsBase):
+    def setUp(self):
+        super(TestDataAPI, self).setUp()
+        self.login()
+
+    def tearDown(self):
+        self.logout()
+        super(TestDataAPI, self).tearDown()
+
+    def test_send_data_without_login(self):
+        self.logout()
+        rv = self.client.post(DATA_PATH)
+        assert str.encode('401 Unauthorized') in rv.data
 
     def test_send_data_bad_request_format(self):
         rv = self.client.post(DATA_PATH)
@@ -95,10 +122,9 @@ class TestFlaskAPIs(unittest.TestCase):
 
         fake_mqtt_broker = FakeBroker(port=1883)
         fake_mqtt_broker.start()
+
         check_connection_established(fake_mqtt_broker, MQTT_CLIENT_ID)
-
         check_connection_ack(fake_mqtt_broker)
-
         fake_mqtt_broker.receive_packet(1000)
 
 
