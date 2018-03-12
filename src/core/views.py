@@ -17,11 +17,15 @@ TOKEN_EXPIRED_MESSAGE = 'Signature expired'
 INVALID_TOKEN_MESSAGE = 'Invalid token'
 LOGIN_MESSAGE = 'Logged in'
 FIELD_IS_MISSING = lambda field_name: '{} field is missing'.format(field_name)
+DATA_SENT_MESSAGE = 'Data Sent'
 
 
 class LoginAPI(MethodView):
-
     def post(self):
+        """
+        Request: data:{"token":"<user token>"}
+        :return: error or logs the user in
+        """
         try:
             post_data = request.get_json(force=True)
         except:
@@ -44,13 +48,13 @@ class LoginAPI(MethodView):
 
 
 class DataAPI(MethodView):
-    """
-    Data Manipulation API
-    """
-
     @login_required
     def post(self):
-        # send data request
+        """
+        send data to platform using MQTT
+        Request: data:{"data":"thing data"}
+        :return: error or successful send message
+        """
         try:
             post_data = request.get_json(force=True)
         except:
@@ -62,12 +66,10 @@ class DataAPI(MethodView):
             return generate_response('fail', FIELD_IS_MISSING('data'))
 
         # send data to platform
-        mqtt_handler = MqttHandler(client_id=MQTT_CLIENT_ID, topic=MQTT_TOPIC,
-                                   broker_host=MQTT_BROKER_HOST)
-        mqtt_handler.publish_single_message(topic=mqtt_handler.topic, payload=data,
-                                            hostname=mqtt_handler.broker_host,
-                                            client_id=mqtt_handler.client_id)
-        return generate_response(SUCCESS, LOGIN_MESSAGE)
+        MqttHandler.publish_single_message(topic=MQTT_TOPIC, payload=data,
+                                           hostname=MQTT_BROKER_HOST,
+                                           client_id=MQTT_CLIENT_ID)
+        return generate_response(SUCCESS, DATA_SENT_MESSAGE)
 
 
 class ControlAPI(MethodView):

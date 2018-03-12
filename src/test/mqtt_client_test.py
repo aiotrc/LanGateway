@@ -12,12 +12,10 @@ CLIENT_ID = 'test_connection_client'
 
 
 class TestConnection(unittest.TestCase):
-
     def test_connect_success(self):
         mqttc = make_active_client()
 
-        fake_broker = FakeBroker()
-        fake_broker.start()
+        fake_broker = make_active_fake_broker()
 
         check_connection_established(fake_broker)
 
@@ -38,8 +36,7 @@ class TestConnection(unittest.TestCase):
     def test_connect_failure(self):
         mqttc = make_active_client()
 
-        fake_broker = FakeBroker()
-        fake_broker.start()
+        fake_broker = make_active_fake_broker()
 
         check_connection_established(fake_broker)
 
@@ -67,8 +64,7 @@ class TestPublishBrokerToClient(unittest.TestCase):
         mqttc.client.on_message = on_message
 
         try:
-            fake_broker = FakeBroker()
-            fake_broker.start()
+            fake_broker = make_active_fake_broker()
 
             check_connection_established(fake_broker)
 
@@ -97,8 +93,7 @@ class TestPublishBrokerToClient(unittest.TestCase):
         mqttc.client.on_message = on_message
 
         try:
-            fake_broker = FakeBroker()
-            fake_broker.start()
+            fake_broker = make_active_fake_broker()
 
             check_connection_established(fake_broker)
 
@@ -124,8 +119,7 @@ class TestPublishBrokerToClient(unittest.TestCase):
         mqttc = make_active_client()
 
         try:
-            fake_broker = FakeBroker()
-            fake_broker.start()
+            fake_broker = make_active_fake_broker()
 
             check_connection_established(fake_broker)
 
@@ -157,8 +151,7 @@ class TestPublishClientToBroker(unittest.TestCase):
 
         _thread.start_new_thread(publish_message, ())
 
-        fake_broker = FakeBroker()
-        fake_broker.start()
+        fake_broker = make_active_fake_broker()
 
         check_connection_established(fake_broker)
 
@@ -175,6 +168,12 @@ class TestPublishClientToBroker(unittest.TestCase):
         fake_broker.finish()
 
 
+def make_active_fake_broker():
+    fake_broker = FakeBroker()
+    fake_broker.start()
+    return fake_broker
+
+
 def make_active_client():
     mqttc = MqttHandler(client_id=CLIENT_ID, topic='test_topic', broker_host='localhost', broker_port=1888)
     mqttc.connect_async()
@@ -182,8 +181,8 @@ def make_active_client():
     return mqttc
 
 
-def check_connection_established(fake_broker):
-    connect_packet = paho_test.gen_connect(CLIENT_ID)
+def check_connection_established(fake_broker, client_id=CLIENT_ID):
+    connect_packet = paho_test.gen_connect(client_id)
     packet_in = fake_broker.receive_packet(len(connect_packet))
     assert packet_in  # Check connection was not closed
     assert packet_in == connect_packet

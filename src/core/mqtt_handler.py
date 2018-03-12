@@ -11,13 +11,16 @@ from core import app
 
 MQTT_TOPIC = 'LAN_GATEWAY_TOPIC'
 MQTT_CLIENT_ID = 'LAN_GATEWAY'
-MQTT_BROKER_HOST = '172.23.132.37'
+MQTT_BROKER_HOST = app.config.get('MQTT_BROKER_HOST', 'localhost')
+MQTT_BROKER_PORT = 1883
 MQTT_PROTOCOL_VERSION = MQTTv311
 
 USER_DATA_MESSAGE_RECEIVED = 'message_received'
 
+
 class MqttHandler:
-    def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost', broker_port=1883):
+    def __init__(self, client_id='DEFAULT_CLIENT_ID', topic='DEFAULT_TOPIC', broker_host='localhost',
+                 broker_port=MQTT_BROKER_PORT):
         self.subscribed = False
         self.client_id = client_id
         self.client = Client(client_id=self.client_id, protocol=MQTT_PROTOCOL_VERSION)
@@ -79,7 +82,7 @@ class MqttHandler:
 
     @staticmethod
     def publish_single_message(topic, payload=None, qos=0, retain=False, hostname="localhost",
-                               port=1883, client_id="", keepalive=60, will=None, auth=None, tls=None):
+                               port=MQTT_BROKER_PORT, client_id="", keepalive=60, will=None, auth=None, tls=None):
         if app.config.get('DEBUG', False):
             print("publish_single_message")
         single(topic=topic, payload=payload, qos=qos, retain=retain, hostname=hostname, port=port, client_id=client_id,

@@ -7,13 +7,13 @@ import pytest
 
 
 class FakeBroker:
-    def __init__(self):
+    def __init__(self, host='localhost', port=1888):
         # Bind to "localhost" for maximum performance, as described in:
         # http://docs.python.org/howto/sockets.html#ipc
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.settimeout(30)
-        sock.bind(("localhost", 1888))
+        sock.bind((host, port))
         sock.listen(1)
 
         self._sock = sock
