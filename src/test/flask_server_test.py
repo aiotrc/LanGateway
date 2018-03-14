@@ -50,7 +50,7 @@ class TestFlaskAPIsBase(unittest.TestCase):
         thing1 = User(name='thing1')
 
         thing2 = User(name='thing2')
-        self.valid_token = thing2.encode_auth_token(1).decode('utf-8')
+        self.valid_token = User.encode_auth_token(1).decode('utf-8')
 
         db.session.add(thing1)
         db.session.add(thing2)

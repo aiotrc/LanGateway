@@ -1,6 +1,5 @@
 import random
 
-from flask import request
 from flask_login import current_user
 from flask_socketio import SocketIO, emit
 from flask_socketio import disconnect
@@ -13,9 +12,13 @@ COMMAND_RESPONSE_TOPIC = 'command_response'
 DATA_TOPIC = 'data'
 DATA_RESPONSE_TOPIC = 'data_response'
 
+SOCKETIO_HOST = 'localhost'
+SOCKETIO_PORT = 5001
+
 
 @socketio.on('connect')
 def connect_handler():
+    print(current_user)
     if current_user.is_authenticated:
         emit('my response',
              {'message': '{0} has joined'.format(current_user.name)},
@@ -51,4 +54,4 @@ def emit_command(topic, payload):
 
 
 if __name__ == '__main__':
-    socketio.run(app=app, host='localhost', port=5001)
+    socketio.run(app=app, host=SOCKETIO_HOST, port=SOCKETIO_PORT)

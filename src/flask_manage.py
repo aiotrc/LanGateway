@@ -6,6 +6,10 @@ from flask_script import Manager
 from gevent.wsgi import WSGIServer
 
 from core import app, db
+from core.models import User
+
+HTTPS_HOST = 'localhost'
+HTTPS_PORT = 5000
 
 # payload = {
 #     'exp': datetime.datetime.utcnow(),
@@ -31,6 +35,16 @@ def create_db():
     db.create_all()
 
 
+def init_db():
+
+    thing1 = User(name='thing1')
+    thing2 = User(name='thing2')
+
+    db.session.add(thing1)
+    db.session.add(thing2)
+    db.session.commit()
+
+
 @manager.command
 def drop_db():
     """Drops the db tables."""
@@ -43,10 +57,11 @@ def start_http_server():
 
 
 def make_http_server():
-    http_server = WSGIServer(('localhost', 5000), app, keyfile='server.key', certfile='server.crt')
+    http_server = WSGIServer((HTTPS_HOST, HTTPS_PORT), app, keyfile='server.key', certfile='server.crt')
     return http_server
 
 
 if __name__ == '__main__':
     create_db()
-    # start_http_server()
+    init_db()
+    start_http_server()

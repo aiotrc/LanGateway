@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import threading
@@ -7,32 +8,33 @@ from multiprocessing import Process
 from requests import post
 from socketIO_client import BaseNamespace, SocketIO
 
+from core.control import LOGIN_PATH, DATA_PATH
+from core.models import User
+from core.socketio_runner import SOCKETIO_HOST, SOCKETIO_PORT, COMMAND_RESPONSE_TOPIC, COMMAND_TOPIC, \
+    DATA_RESPONSE_TOPIC, DATA_TOPIC
+from core.views import DATA_FIELD
+from flask_manage import HTTPS_HOST, HTTPS_PORT
 from src import ROOT_DIR
 
-COMMAND_TOPIC = 'command'
-COMMAND_RESPONSE_TOPIC = 'command_response'
-
-DATA_TOPIC = 'data'
-DATA_RESPONSE_TOPIC = 'data_response'
-
-HTTPS_HOST = 'localhost'
-HTTPS_PORT = 5000
-HTTPS_DATA_URI = 'https://{}:{}/data'.format(HTTPS_HOST, HTTPS_PORT)
-
-SOCKETIO_HOST = 'localhost'
-SOCKETIO_PORT = 5001
-
+HTTPS_URI = lambda url: 'https://{}:{}{}'.format(HTTPS_HOST, HTTPS_PORT, url)
 data_rate = 10
 
 
-def send_data_https():
+def https_login():
     pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
-    result = post(HTTPS_DATA_URI, json=dict(
-        token='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1MjAyNTAwMDIsImlhdCI6MTUxNzY1ODAwMiwic3ViIjoxfQ'
-              '.L5SZVHC1Pc2jdV88SP2a0Son6jDbUnSCbtaq8I_P9fQ',
-        data='{"temp":"20"}'
+    valid_token = User.encode_auth_token(1).decode('utf-8')
+    result = post(HTTPS_URI(LOGIN_PATH), json=dict(
+        token=valid_token
     ), verify=pem_file_path)
-    return result
+    print(result.text)
+
+
+def https_send_data():
+    pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
+    result = post(HTTPS_URI(DATA_PATH), json=dict(
+        data=json.dumps({DATA_FIELD: 'thing data'})
+    ), verify=pem_file_path)
+    print(result.text)
 
 
 class SocketioNamespace(BaseNamespace):
@@ -44,8 +46,6 @@ class SocketioNamespace(BaseNamespace):
 
     def on_disconnect(self):
         print('[Disconnected]')
-
-
 
     @staticmethod
     def on_command(*args):
@@ -89,8 +89,8 @@ def stop_all(processes=None):
 
 
 if __name__ == '__main__':
-    result = send_data_https()
-    print(result)
+    https_login()
+    https_send_data()
     logging.getLogger('socketIO-client').setLevel(logging.DEBUG)
     logging.basicConfig()
     p_listen = Process(target=socketio_start_listening, args=())

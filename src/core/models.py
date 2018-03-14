@@ -19,7 +19,8 @@ class User(db.Model, UserMixin):
     def __init__(self, name="Unknown"):
         self.name = name
 
-    def encode_auth_token(self, user_id):
+    @staticmethod
+    def encode_auth_token(user_id):
         """
         Generates the Auth Token
         :return: string

@@ -1,16 +1,16 @@
 import unittest
 import httpretty
 
-from client import send_data_https, HTTPS_DATA_URI
+from client import https_login, HTTPS_URI
 
 
 class TestClient(unittest.TestCase):
 
     @httpretty.activate
     def test_send_data(self):
-        httpretty.register_uri(httpretty.POST, HTTPS_DATA_URI,
+        httpretty.register_uri(httpretty.POST, HTTPS_URI,
                                body="Data sent to platform")
-        result = send_data_https()
+        result = https_login()
         self.assertEqual(result.status_code, 200)
 
 
