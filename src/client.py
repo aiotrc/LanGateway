@@ -45,6 +45,8 @@ class SocketioNamespace(BaseNamespace):
     def on_disconnect(self):
         print('[Disconnected]')
 
+
+
     @staticmethod
     def on_command(*args):
         print('on_command', args)

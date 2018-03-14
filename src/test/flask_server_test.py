@@ -1,16 +1,16 @@
 import _thread
 import json
 import unittest
-
-from flask import jsonify
+from unittest import mock
 
 from core import db, app
 from core.control import LOGIN_PATH, DATA_PATH, LOGOUT_PATH, CONTROL_PATH
 from core.models import User
 from core.mqtt_handler import MQTT_CLIENT_ID
-from core.views import BAD_FORMAT_MESSAGE, FIELD_IS_MISSING, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
+from core.views import BAD_FORMAT_MESSAGE, INVALID_TOKEN_MESSAGE, TOKEN_EXPIRED_MESSAGE, \
     LOGIN_MESSAGE, FIELD_IS_MISSING, DATA_SENT_MESSAGE, LOGOUT_MESSAGE, TOKEN_FIELD, DATA_FIELD, COMMAND_TYPE_FIELD, \
-    COMMAND_ARGS_FIELD, BAD_COMMAND_MESSAGE, COMMAND_TYPE_NEW_THING, NAME_FIELD, SUCCESS, MESSAGE
+    COMMAND_ARGS_FIELD, BAD_COMMAND_MESSAGE, COMMAND_TYPE_NEW_THING, NAME_FIELD, SUCCESS, MESSAGE, \
+    NOT_AUTHORIZED_MESSAGE
 from test.mqtt_client_test import check_connection_established, check_connection_ack
 from test.paho_mqtt_test_helper.broker import FakeBroker
 
@@ -59,11 +59,19 @@ class TestFlaskAPIsBase(unittest.TestCase):
     def login(self, token=None):
         if not token:
             token = self.valid_token
-        rv = self.client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: token}))
+        self.login_user(self.client, token)
+
+    @staticmethod
+    def login_user(client, token):
+        rv = client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: token}))
         assert str.encode(LOGIN_MESSAGE) in rv.data
 
     def logout(self):
-        rv = self.client.post(LOGOUT_PATH)
+        self.logout_user(self.client)
+
+    @staticmethod
+    def logout_user(client):
+        rv = client.post(LOGOUT_PATH)
         assert str.encode(LOGOUT_MESSAGE) in rv.data
 
 
@@ -84,10 +92,8 @@ class TestLoginLogout(TestFlaskAPIsBase):
         rv = self.client.post(LOGIN_PATH, data=json.dumps({TOKEN_FIELD: self.expired_token}))
         assert str.encode(TOKEN_EXPIRED_MESSAGE) in rv.data
 
-    def test_login_with_valid_token(self):
+    def test_login_logout(self):
         self.login()
-
-    def test_logout(self):
         self.logout()
 
 
@@ -104,6 +110,7 @@ class TestDataAPI(TestFlaskAPIsBase):
         self.logout()
         rv = self.client.post(DATA_PATH)
         assert str.encode('401 Unauthorized') in rv.data
+        self.login()
 
     def test_send_data_bad_request_format(self):
         rv = self.client.post(DATA_PATH)
@@ -129,6 +136,10 @@ class TestDataAPI(TestFlaskAPIsBase):
 
 
 class TestControlAPI(TestFlaskAPIsBase):
+    def test_send_command_not_local(self):
+        rv = self.client.post(CONTROL_PATH, headers={'host': 'example.com'})
+        assert str.encode(NOT_AUTHORIZED_MESSAGE) in rv.data
+
     def test_send_command_bad_request_format(self):
         rv = self.client.post(CONTROL_PATH)
         assert str.encode(BAD_FORMAT_MESSAGE) in rv.data
@@ -167,6 +178,7 @@ class TestControlAPI(TestFlaskAPIsBase):
         assert new_token
 
         self.login(token=new_token)
+        self.logout()
 
 
 if __name__ == '__main__':

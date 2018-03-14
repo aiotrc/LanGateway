@@ -166,3 +166,4 @@ pyvenv.cfg
 pip-selfcheck.json
 
 # Generated Outputs
+flask_session

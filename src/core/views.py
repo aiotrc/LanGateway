@@ -29,6 +29,7 @@ LOGOUT_MESSAGE = 'Logged out'
 DATA_FIELD = 'data'
 DATA_SENT_MESSAGE = 'Data Sent'
 
+NOT_AUTHORIZED_MESSAGE = '401 Unauthorized'
 COMMAND_TYPE_FIELD = 'type'
 COMMAND_ARGS_FIELD = 'args'
 COMMAND_TYPE_NEW_THING = 'new_thing'
@@ -65,6 +66,7 @@ class LoginAPI(MethodView):
 
 
 class LogoutAPI(MethodView):
+    @login_required
     def post(self):
         logout_user()
 
@@ -103,7 +105,10 @@ class ControlAPI(MethodView):
         Request: data:{"type":"new_thing", "args":{"name":"<thing name>"}}
         :return: error or command successful message with results
         """
-        print(request.host)
+        host = request.host
+        if host not in ['localhost', '127.0.0.1']:
+            return generate_response(FAIL, NOT_AUTHORIZED_MESSAGE)
+
         try:
             post_data = request.get_json(force=True)
         except:

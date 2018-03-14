@@ -13,6 +13,7 @@ class BaseConfig:
     BCRYPT_LOG_ROUNDS = 13
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     LOGIN_REMEMBER_DAYS = 7
+    SESSION_TYPE = 'filesystem'
 
 
 class DevelopmentConfig(BaseConfig):
@@ -27,7 +28,6 @@ class TestingConfig(BaseConfig):
     DEBUG = True
     TESTING = True
     BCRYPT_LOG_ROUNDS = 4
-    LOGIN_DISABLED = True
     MQTT_BROKER_HOST = 'localhost'
     SQLALCHEMY_DATABASE_URI = postgres_local_base + database_name + '_test'
     PRESERVE_CONTEXT_ON_EXCEPTION = False
