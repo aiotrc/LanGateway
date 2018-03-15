@@ -5,7 +5,7 @@ import threading
 import os
 from multiprocessing import Process
 
-from requests import post
+import requests
 from socketIO_client import BaseNamespace, SocketIO
 
 from core.control import LOGIN_PATH, DATA_PATH
@@ -20,18 +20,18 @@ HTTPS_URI = lambda url: 'https://{}:{}{}'.format(HTTPS_HOST, HTTPS_PORT, url)
 data_rate = 10
 
 
-def https_login():
+def https_login(session):
     pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
     valid_token = User.encode_auth_token(1).decode('utf-8')
-    result = post(HTTPS_URI(LOGIN_PATH), json=dict(
+    result = session.post(HTTPS_URI(LOGIN_PATH), json=dict(
         token=valid_token
     ), verify=pem_file_path)
     print(result.text)
 
 
-def https_send_data():
+def https_send_data(session):
     pem_file_path = os.path.join(ROOT_DIR, 'server.pem')
-    result = post(HTTPS_URI(DATA_PATH), json=dict(
+    result = session.post(HTTPS_URI(DATA_PATH), json=dict(
         data=json.dumps({DATA_FIELD: 'thing data'})
     ), verify=pem_file_path)
     print(result.text)
@@ -89,8 +89,9 @@ def stop_all(processes=None):
 
 
 if __name__ == '__main__':
-    https_login()
-    https_send_data()
+    session = requests.Session()
+    https_login(session)
+    https_send_data(session)
     logging.getLogger('socketIO-client').setLevel(logging.DEBUG)
     logging.basicConfig()
     p_listen = Process(target=socketio_start_listening, args=())
