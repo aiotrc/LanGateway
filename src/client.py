@@ -11,7 +11,7 @@ from socketIO_client import BaseNamespace, SocketIO
 from core.control import LOGIN_PATH, DATA_PATH
 from core.models import User
 from core.socketio_runner import SOCKETIO_HOST, SOCKETIO_PORT, COMMAND_RESPONSE_TOPIC, COMMAND_TOPIC, \
-    DATA_RESPONSE_TOPIC, DATA_TOPIC
+    DATA_RESPONSE_TOPIC, DATA_TOPIC, SIO_COMMAND_FIELD, SIO_ARGS_FIELD, SIO_DATA_FIELD, COMMAND_SET_DATA_RATE
 from core.views import DATA_FIELD
 from flask_manage import HTTPS_HOST, HTTPS_PORT
 from src import ROOT_DIR
@@ -50,14 +50,14 @@ class SocketioNamespace(BaseNamespace):
 
     def on_command(self, *args):
         print('on_command', args)
-        if args[0].get('command') == 'set_data_rate':
+        if args[0].get(SIO_COMMAND_FIELD) == COMMAND_SET_DATA_RATE:
             global data_rate
-            data_rate = args[0].get('args')[0]
-            print('set_data_rate:', data_rate)
+            data_rate = args[0].get(SIO_ARGS_FIELD)[0]
+            print(COMMAND_SET_DATA_RATE, data_rate)
         else:
-            self.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is not implemented!'})
+            self.emit(COMMAND_RESPONSE_TOPIC, {SIO_DATA_FIELD: 'Command is not implemented!'})
             return
-        self.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is done'})
+        self.emit(COMMAND_RESPONSE_TOPIC, {SIO_DATA_FIELD: 'Command is done'})
 
     @staticmethod
     def on_data_response(*args):
