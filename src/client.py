@@ -15,6 +15,7 @@ from core.socketio_runner import SOCKETIO_HOST, SOCKETIO_PORT, COMMAND_RESPONSE_
 from core.views import DATA_FIELD
 from flask_manage import HTTPS_HOST, HTTPS_PORT
 from src import ROOT_DIR
+from test.paho_mqtt_test_helper.broker import FakeBroker
 
 HTTPS_URI = lambda url: 'https://{}:{}{}'.format(HTTPS_HOST, HTTPS_PORT, url)
 data_rate = 10
@@ -47,43 +48,37 @@ class SocketioNamespace(BaseNamespace):
     def on_disconnect(self):
         print('[Disconnected]')
 
-    @staticmethod
-    def on_command(*args):
+    def on_command(self, *args):
         print('on_command', args)
-        socketio = SocketIO(SOCKETIO_HOST, SOCKETIO_PORT)
         if args[0].get('command') == 'set_data_rate':
             global data_rate
             data_rate = args[0].get('args')[0]
             print('set_data_rate:', data_rate)
         else:
-            socketio.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is not implemented!'})
+            self.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is not implemented!'})
             return
-        socketio.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is done'})
+        self.emit(COMMAND_RESPONSE_TOPIC, {'data': 'Command is done'})
 
     @staticmethod
     def on_data_response(*args):
         print('on_data_response', args)
 
 
-def socketio_start_listening():
-    socketio = SocketIO(SOCKETIO_HOST, SOCKETIO_PORT, SocketioNamespace)
-    socketio.on(COMMAND_TOPIC, SocketioNamespace.on_command)
+def socketio_start_listening(cookies):
+    socketio = SocketIO(SOCKETIO_HOST, SOCKETIO_PORT, SocketioNamespace, cookies=cookies)
     socketio.wait(seconds=60)
-    socketio_start_listening()
+    socketio_start_listening(cookies)
 
 
-def send_data():
-    socketio = SocketIO(SOCKETIO_HOST, SOCKETIO_PORT, SocketioNamespace)
+def send_data(cookies):
+    socketio = SocketIO(SOCKETIO_HOST, SOCKETIO_PORT, SocketioNamespace, cookies=cookies)
     socketio.on(DATA_RESPONSE_TOPIC, SocketioNamespace.on_data_response)
     socketio.emit(DATA_TOPIC, {'data': random.randint(10, 100)})
-    socketio.wait(seconds=2)
-    threading.Timer(data_rate, send_data, []).start()
+    socketio.wait(seconds=5)
+    threading.Timer(data_rate, send_data, [cookies]).start()
 
 
-def stop_all(processes=None):
-    if processes is None:
-        processes = []
-
+def stop_all(processes=list()):
     for process in processes:
         process.terminate()
 
@@ -92,10 +87,15 @@ if __name__ == '__main__':
     session = requests.Session()
     https_login(session)
     https_send_data(session)
+
+    cookies = session.cookies.get_dict()
+
     logging.getLogger('socketIO-client').setLevel(logging.DEBUG)
     logging.basicConfig()
-    p_listen = Process(target=socketio_start_listening, args=())
+
+    p_listen = Process(target=socketio_start_listening, args=(cookies,))
     p_listen.start()
-    p_send = Process(target=send_data, args=())
+
+    p_send = Process(target=send_data, args=(cookies,))
     p_send.start()
     # stop_all([p_listen, p_send])
